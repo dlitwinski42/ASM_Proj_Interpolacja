@@ -1,2 +1,15 @@
 ﻿  main.cpp
+E:\[E]Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\Interpolacja_Funkcji\main.cpp(23,23): warning C4018: "<": niezgodność typu ze znakiem/bez znaku
+E:\[E]Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\Interpolacja_Funkcji\main.cpp(29,23): warning C4018: "<": niezgodność typu ze znakiem/bez znaku
+E:\[E]Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\Interpolacja_Funkcji\main.cpp(61,37): warning C4244: "argument": konwersja z "WCHAR" do "const _Ty", możliwa utrata danych
+          with
+          [
+              _Ty=char
+          ]
+E:\[E]Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\Interpolacja_Funkcji\main.cpp(64,41): warning C4244: "argument": konwersja z "WCHAR" do "const _Ty", możliwa utrata danych
+          with
+          [
+              _Ty=char
+          ]
+E:\[E]Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\Interpolacja_Funkcji\main.cpp(73,23): warning C4018: "<": niezgodność typu ze znakiem/bez znaku
   Interpolacja_Funkcji.vcxproj -> E:\[E]Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\Debug\Interpolacja_Funkcji.exe
