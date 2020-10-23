@@ -7,11 +7,14 @@
 LPCWSTR NazwaKlasy = (LPCWSTR)L"Klasa Okienka";
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 MSG Komunikat;
-HWND g_hBtn_Asm, g_hBtn_C, g_hRamka1, g_hRamka2, h_xCoord, h_yCoord, hText1, hText2, hResAsm, hResCpp;
+HWND g_hBtn_Asm, g_hBtn_C, g_hRamka1, g_hRamka2, h_xCoord, h_yCoord, hText1, hText2, hResAsm, hResCpp, h_xParam;
 HFONT hNormalFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 DWORD dlugosc;
 LPWSTR Bufor;
-double* xcoords, * ycoords;
+double* xCoords, * yCoords, xParam, resultLaG, resultAit;
+int  xCount, yCount;
+typedef double(*MYPROC)(double*,double*, int,double);
+MYPROC LaGC;
 
 double cvec_to_double(std::vector<char> c_vec) {
     int point_loc, point_dist;
@@ -47,7 +50,7 @@ double cvec_to_double(std::vector<char> c_vec) {
     }
     return result;
 }
-double* convert_buffer(LPWSTR buffer, int length) {
+double* convert_buffer(LPWSTR buffer, int length, int& count) {
     std::vector<char> c_vec;
     std::vector<double> d_vec;
     double* result;
@@ -70,6 +73,7 @@ double* convert_buffer(LPWSTR buffer, int length) {
     }
     d_vec.push_back(cvec_to_double(c_vec));
     result = new double[d_vec.size()];
+    count = d_vec.size();
     for (int i = 0; i < d_vec.size(); i++) {
         helper = d_vec[i];
         result[i] = helper;
@@ -79,6 +83,10 @@ double* convert_buffer(LPWSTR buffer, int length) {
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
+    HINSTANCE hDll;
+    hDll = LoadLibrary((LPCWSTR)L"InterpolacjaCpp");
+    LaGC = (MYPROC)GetProcAddress(hDll, "LaGrangeFinal");
+
     WNDCLASSEX wc = {
     wc.cbSize = sizeof(WNDCLASSEX),
     wc.style = 0,
@@ -120,6 +128,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         50, 50, 150, 20, hwnd, NULL, hInstance, NULL);
     h_yCoord = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
         50, 100, 150, 20, hwnd, NULL, hInstance, NULL);
+    h_xParam = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
+        50, 150, 40, 20, hwnd, NULL, hInstance, NULL);
     hText1 = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 50, 30, 150, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hText1, (LPCWSTR)L"WprowadŸ wspó³rzêdne x:");
@@ -161,10 +171,22 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         switch (wParam) {
         case ID_BTN_ASM:
+            dlugosc = GetWindowTextLength(h_xParam);
+            Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
+            GetWindowText(h_xParam, Bufor, dlugosc + 1);
+            xParam = convert_buffer(Bufor, dlugosc, xCount)[0];
             dlugosc = GetWindowTextLength(h_xCoord);
             Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
             GetWindowText(h_xCoord, Bufor, dlugosc + 1);
-            xcoords = convert_buffer(Bufor, dlugosc);
+            xCoords = convert_buffer(Bufor, dlugosc, xCount);
+            dlugosc = GetWindowTextLength(h_yCoord);
+            GetWindowText(h_yCoord, Bufor, dlugosc + 1);
+            yCoords = convert_buffer(Bufor, dlugosc, yCount);
+            if (xCount != yCount) {
+                MessageBox(hwnd, (LPCWSTR)L"B³êdna iloœæ wspó³rzêdnych", (LPCWSTR)L"Ok", MB_ICONSTOP);
+                break;
+            }
+            resultLaG = LaGC(xCoords, yCoords, xCount, xParam);
             MessageBox(hwnd, (LPCWSTR)Bufor, (LPCWSTR)L"Ok", MB_ICONINFORMATION);
             break;
         case ID_BTN_C:
