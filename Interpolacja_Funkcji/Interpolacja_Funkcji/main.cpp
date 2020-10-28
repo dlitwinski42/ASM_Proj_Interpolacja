@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <strsafe.h>
 #include <vector>
 
 #define ID_BTN_ASM 501
@@ -7,14 +8,15 @@
 LPCWSTR NazwaKlasy = (LPCWSTR)L"Klasa Okienka";
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 MSG Komunikat;
-HWND g_hBtn_Asm, g_hBtn_C, g_hRamka1, g_hRamka2, h_xCoord, h_yCoord, hText1, hText2, hResAsm, hResCpp, h_xParam;
+HWND g_hBtn_Asm, g_hBtn_C, g_hRamka1, g_hRamka2, g_hRamka3, g_hRamka4, g_hRadio_Auto, g_hRadio_Input, h_xCoord, h_yCoord, hText1, hText2, hLblLC, hLblAC,
+hResLC, hResAC, hLblLA, hLblAA, hResLA, hResAA, hResultLbl, hResultVal, h_xParam, h_Cores, g_hRamkaCores, g_hRamkaResult, h_xParamCap;
 HFONT hNormalFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 DWORD dlugosc;
 LPWSTR Bufor;
 double* xCoords, * yCoords, xParam, resultLaG, resultAit;
 int  xCount, yCount;
 typedef double(*MYPROC)(double*,double*, int,double);
-MYPROC LaGC;
+MYPROC LaGC, AitC;
 
 double cvec_to_double(std::vector<char> c_vec) {
     int point_loc, point_dist;
@@ -86,6 +88,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HINSTANCE hDll;
     hDll = LoadLibrary((LPCWSTR)L"InterpolacjaCpp");
     LaGC = (MYPROC)GetProcAddress(hDll, "LaGrangeFinal");
+    AitC = (MYPROC)GetProcAddress(hDll, "Aitken");
+
 
     WNDCLASSEX wc = {
     wc.cbSize = sizeof(WNDCLASSEX),
@@ -113,23 +117,48 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     hwnd = CreateWindowEx(WS_EX_CLIENTEDGE, NazwaKlasy, (LPCWSTR)L"Test interpolacji funkcji", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 600, 400, NULL, NULL, hInstance, NULL);
     g_hBtn_Asm = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Zrealizuj w ASM", WS_CHILD | WS_VISIBLE,
-        30, 250, 150, 30, hwnd, (HMENU)ID_BTN_ASM, hInstance, NULL);
+        290, 280, 270, 30, hwnd, (HMENU)ID_BTN_ASM, hInstance, NULL);
     SendMessage(g_hBtn_Asm, WM_SETFONT, (WPARAM)hNormalFont, 0);
     g_hBtn_C = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Zrealizuj w C", WS_CHILD | WS_VISIBLE,
-        200, 250, 150, 30, hwnd, (HMENU)ID_BTN_C, hInstance, NULL);
+        290, 320, 270, 30, hwnd, (HMENU)ID_BTN_C, hInstance, NULL);
     SendMessage(g_hBtn_C, WM_SETFONT, (WPARAM)hNormalFont, 0);
     g_hRamka1 = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Wprowadzanie danych", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-        5, 5, 280, 350, hwnd, NULL, hInstance, NULL);
+        5, 5, 280, 180, hwnd, NULL, hInstance, NULL);
     SendMessage(g_hRamka1, WM_SETFONT, (WPARAM)hNormalFont, 0);
     g_hRamka2 = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Wyniki pomiarów", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
         285, 5, 280, 350, hwnd, NULL, hInstance, NULL);
     SendMessage(g_hRamka2, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    g_hRamka3 = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Czasy C++", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+        290, 25, 275, 90, hwnd, NULL, hInstance, NULL);
+    SendMessage(g_hRamka3, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    g_hRamka4 = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Czasy Asm", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+        290, 105, 275, 100, hwnd, NULL, hInstance, NULL);
+    SendMessage(g_hRamka4, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    g_hRamkaCores = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Wybór rdzeni", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+        5, 180, 280, 180, hwnd, NULL, hInstance, NULL);
+    SendMessage(g_hRamkaCores, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    g_hRamkaResult = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Wynik", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+        290, 200, 275, 80, hwnd, NULL, hInstance, NULL);
+    SendMessage(g_hRamkaResult, WM_SETFONT, (WPARAM)hNormalFont, 0);
     h_xCoord = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
         50, 50, 150, 20, hwnd, NULL, hInstance, NULL);
     h_yCoord = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
         50, 100, 150, 20, hwnd, NULL, hInstance, NULL);
     h_xParam = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
         50, 150, 40, 20, hwnd, NULL, hInstance, NULL);
+    g_hRadio_Auto = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Auto", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
+        50, 200, 60, 20, hwnd, NULL, hInstance, NULL);
+    g_hRadio_Input = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Iloœæ:", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
+        50, 220, 60, 20, hwnd, NULL, hInstance, NULL);
+    h_Cores = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
+        100, 220, 40, 20, hwnd, NULL, hInstance, NULL);
+    hResultLbl = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 50, 30, 150, 20, hwnd, NULL, hInstance, NULL);
+    hResultVal = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 50, 30, 150, 20, hwnd, NULL, hInstance, NULL);
+    SendMessage(g_hRadio_Auto, BM_SETCHECK, BST_CHECKED, 0);
+    SendMessage(g_hRadio_Auto, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    SendMessage(g_hRadio_Input, WM_SETFONT, (WPARAM)hNormalFont, 0);
     hText1 = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 50, 30, 150, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hText1, (LPCWSTR)L"WprowadŸ wspó³rzêdne x:");
@@ -138,14 +167,51 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         SS_LEFT, 50, 80, 150, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hText2, (LPCWSTR)L"WprowadŸ wspó³rzêdne y:");
     SendMessage(hText2, WM_SETFONT, (WPARAM)hNormalFont, 0);
-    hResAsm = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
-        SS_LEFT, 300, 50, 200, 20, hwnd, NULL, hInstance, NULL);
-    SetWindowText(hResAsm, (LPCWSTR)L"Rezultat Asm:");
-    SendMessage(hResAsm, WM_SETFONT, (WPARAM)hNormalFont, 0);
-    hResCpp = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
-        SS_LEFT, 300, 80, 200, 20, hwnd, NULL, hInstance, NULL);
-    SetWindowText(hResCpp, (LPCWSTR)L"Rezultat c++:");
-    SendMessage(hResCpp, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hLblLC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 300, 50, 100, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hLblLC, (LPCWSTR)L"Czas LaGrange:");
+    SendMessage(hLblLC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hResLC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 400, 50, 60, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hResLC, (LPCWSTR)L"0.0000");
+    SendMessage(hResLC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hResAC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 400, 80, 60, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hResAC, (LPCWSTR)L"0.0000");
+    SendMessage(hResAC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hLblAC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 300, 80, 100, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hLblAC, (LPCWSTR)L"Czas Aitken:");
+    SendMessage(hLblAC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hLblLA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 300, 130, 100, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hLblLA, (LPCWSTR)L"Czas LaGrange:");
+    SendMessage(hLblLA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hResLA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 400, 130, 60, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hResLA, (LPCWSTR)L"0.0000");
+    SendMessage(hResLA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hResAA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 400, 160, 60, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hResAA, (LPCWSTR)L"0.0000");
+    SendMessage(hResAA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hLblAA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 300, 160, 100, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hLblAA, (LPCWSTR)L"Czas Aitkena:");
+    SendMessage(hLblAA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hResultVal = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 400, 230, 60, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hResultVal, (LPCWSTR)L"0.0000");
+    SendMessage(hResultVal, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    hResultLbl = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 300, 230, 100, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(hResultLbl, (LPCWSTR)L"Wynik:");
+    SendMessage(hResultLbl , WM_SETFONT, (WPARAM)hNormalFont, 0);
+    h_xParamCap = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 50, 130, 150, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(h_xParamCap, (LPCWSTR)L"WprowadŸ parametr x:");
+    SendMessage(h_xParamCap, WM_SETFONT, (WPARAM)hNormalFont, 0);
+
     
     if (hwnd == NULL)
     {
@@ -171,6 +237,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         switch (wParam) {
         case ID_BTN_ASM:
+            MessageBox(hwnd, (LPCWSTR)L"Realizacja w ASM", (LPCWSTR)L"Ok", MB_ICONINFORMATION);
+            break;
+        case ID_BTN_C:
             dlugosc = GetWindowTextLength(h_xParam);
             Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
             GetWindowText(h_xParam, Bufor, dlugosc + 1);
@@ -187,11 +256,15 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
             }
             resultLaG = LaGC(xCoords, yCoords, xCount, xParam);
-            MessageBox(hwnd, (LPCWSTR)Bufor, (LPCWSTR)L"Ok", MB_ICONINFORMATION);
-            break;
-        case ID_BTN_C:
-            MessageBox(hwnd, (LPCWSTR)L"Realizacja w C", (LPCWSTR)L"Ok", MB_ICONINFORMATION);
-            SetWindowText(hResCpp, (LPCWSTR)L"Aaaa");
+            resultAit = AitC(xCoords, yCoords, xCount, xParam);
+            if (abs((resultAit - resultLaG)) < 0.0001) {
+                TCHAR buff[32];
+                StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%f"), resultAit);
+                SetWindowText(hResultVal, (LPCWSTR)buff);
+            }
+            else {
+                MessageBox(hwnd, (LPCWSTR)L"Coœ posz³o nie tak!", (LPCWSTR)L"B³¹d!", MB_ICONINFORMATION);
+            }
             break;
         default:
             break;
