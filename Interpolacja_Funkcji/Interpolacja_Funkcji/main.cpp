@@ -1,6 +1,8 @@
 #include <windows.h>
 #include <strsafe.h>
 #include <vector>
+#include <chrono>
+#include <thread>
 
 #define ID_BTN_ASM 501
 #define ID_BTN_C 502
@@ -15,8 +17,10 @@ DWORD dlugosc;
 LPWSTR Bufor;
 double* xCoords, * yCoords, xParam, resultLaG, resultAit;
 int  xCount, yCount;
+typedef double(*MYPROC2)(double*, double*, int, double, int);
 typedef double(*MYPROC)(double*,double*, int,double);
-MYPROC LaGC, AitC;
+MYPROC2 LaGC, AitC;
+int avThreads;
 
 double cvec_to_double(std::vector<char> c_vec) {
     int point_loc, point_dist;
@@ -83,12 +87,13 @@ double* convert_buffer(LPWSTR buffer, int length, int& count) {
     return result;
 }
 
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     HINSTANCE hDll;
     hDll = LoadLibrary((LPCWSTR)L"InterpolacjaCpp");
-    LaGC = (MYPROC)GetProcAddress(hDll, "LaGrangeFinal");
-    AitC = (MYPROC)GetProcAddress(hDll, "Aitken");
+    LaGC = (MYPROC2)GetProcAddress(hDll, "LaGrangeFinal");
+    AitC = (MYPROC2)GetProcAddress(hDll, "Aitken");
 
 
     WNDCLASSEX wc = {
@@ -105,6 +110,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     wc.lpszClassName = NazwaKlasy,
     wc.hIconSm = LoadIcon(NULL, IDI_APPLICATION)
     };
+
+    avThreads = std::thread::hardware_concurrency();
 
     if (!RegisterClassEx(&wc))
     {
@@ -232,6 +239,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
+    double timeElapsed;
+    TCHAR buff[32];
     switch (msg)
     {
     case WM_COMMAND:
@@ -239,7 +248,18 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
         case ID_BTN_ASM:
             MessageBox(hwnd, (LPCWSTR)L"Realizacja w ASM", (LPCWSTR)L"Ok", MB_ICONINFORMATION);
             break;
-        case ID_BTN_C:
+        case ID_BTN_C: {
+            if (SendMessage(g_hRadio_Input, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+                dlugosc = GetWindowTextLength(h_Cores);
+                Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
+                GetWindowText(h_Cores, Bufor, dlugosc + 1);
+                if ((int)Bufor[0] < 58 && (int)Bufor[0] > 48) {
+                    avThreads = (int)Bufor[0] - 48;
+                }
+                else {
+                    MessageBox(hwnd, (LPCWSTR)L"B³êdna iloœæ w¹tków", (LPCWSTR)L"Ok", MB_ICONSTOP);
+                }
+            }
             dlugosc = GetWindowTextLength(h_xParam);
             Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
             GetWindowText(h_xParam, Bufor, dlugosc + 1);
@@ -255,22 +275,35 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 MessageBox(hwnd, (LPCWSTR)L"B³êdna iloœæ wspó³rzêdnych", (LPCWSTR)L"Ok", MB_ICONSTOP);
                 break;
             }
-            resultLaG = LaGC(xCoords, yCoords, xCount, xParam);
-            resultAit = AitC(xCoords, yCoords, xCount, xParam);
+            auto start_lc = std::chrono::steady_clock::now();
+            resultLaG = LaGC(xCoords, yCoords, xCount, xParam, avThreads);
+            auto end_lc = std::chrono::steady_clock::now();
+            timeElapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end_lc - start_lc).count();
+            StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%0.10f"), timeElapsed);
+            SetWindowText(hResLC, (LPCWSTR)buff);
+            auto start_ac = std::chrono::steady_clock::now();
+            resultAit = AitC(xCoords, yCoords, xCount, xParam, avThreads);
+            auto end_ac = std::chrono::steady_clock::now();
+            timeElapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end_ac - start_ac).count();
+            StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%0.10f"), timeElapsed);
+            SetWindowText(hResAC, (LPCWSTR)buff);
             if (abs((resultAit - resultLaG)) < 0.0001) {
-                TCHAR buff[32];
+
                 StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%f"), resultAit);
                 SetWindowText(hResultVal, (LPCWSTR)buff);
             }
             else {
                 MessageBox(hwnd, (LPCWSTR)L"Coœ posz³o nie tak!", (LPCWSTR)L"B³¹d!", MB_ICONINFORMATION);
             }
-            break;
+           
+        } break;
         default:
             break;
         }
         break;
     case WM_CLOSE:
+        delete[] xCoords;
+        delete[] yCoords;
         DestroyWindow(hwnd);
         break;
 
