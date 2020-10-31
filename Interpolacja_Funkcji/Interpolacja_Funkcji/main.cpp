@@ -11,7 +11,7 @@ LPCWSTR NazwaKlasy = (LPCWSTR)L"Klasa Okienka";
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 MSG Komunikat;
 HWND g_hBtn_Asm, g_hBtn_C, g_hRamka1, g_hRamka2, g_hRamka3, g_hRamka4, g_hRadio_Auto, g_hRadio_Input, h_xCoord, h_yCoord, hText1, hText2, hLblLC, hLblAC,
-hResLC, hResAC, hLblLA, hLblAA, hResLA, hResAA, hResultLbl, hResultVal, h_xParam, h_Cores, g_hRamkaCores, g_hRamkaResult, h_xParamCap;
+hResLC, hResAC, hLblLA, hLblAA, hResLA, hResAA, hResultLbl, hResultVal, h_xParam, h_Cores, g_hRamkaCores, g_hRamkaResult, h_xParamCap, h_coreInfo;
 HFONT hNormalFont = (HFONT)GetStockObject(DEFAULT_GUI_FONT);
 DWORD dlugosc;
 LPWSTR Bufor;
@@ -158,7 +158,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     g_hRadio_Input = CreateWindowEx(0, (LPCWSTR)L"BUTTON", (LPCWSTR)L"Iloœæ:", WS_CHILD | WS_VISIBLE | BS_AUTORADIOBUTTON,
         50, 220, 60, 20, hwnd, NULL, hInstance, NULL);
     h_Cores = CreateWindowEx(WS_EX_CLIENTEDGE, (LPCWSTR)L"EDIT", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER,
-        100, 220, 40, 20, hwnd, NULL, hInstance, NULL);
+        120, 220, 40, 20, hwnd, NULL, hInstance, NULL);
     hResultLbl = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 50, 30, 150, 20, hwnd, NULL, hInstance, NULL);
     hResultVal = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
@@ -166,59 +166,78 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     SendMessage(g_hRadio_Auto, BM_SETCHECK, BST_CHECKED, 0);
     SendMessage(g_hRadio_Auto, WM_SETFONT, (WPARAM)hNormalFont, 0);
     SendMessage(g_hRadio_Input, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hText1 = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 50, 30, 150, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hText1, (LPCWSTR)L"WprowadŸ wspó³rzêdne x:");
     SendMessage(hText1, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hText2 = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 50, 80, 150, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hText2, (LPCWSTR)L"WprowadŸ wspó³rzêdne y:");
     SendMessage(hText2, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hLblLC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 300, 50, 100, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hLblLC, (LPCWSTR)L"Czas LaGrange:");
     SendMessage(hLblLC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+   
     hResLC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 400, 50, 60, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hResLC, (LPCWSTR)L"0.0000");
     SendMessage(hResLC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+   
     hResAC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 400, 80, 60, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hResAC, (LPCWSTR)L"0.0000");
     SendMessage(hResAC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+   
     hLblAC = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 300, 80, 100, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hLblAC, (LPCWSTR)L"Czas Aitken:");
     SendMessage(hLblAC, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hLblLA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 300, 130, 100, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hLblLA, (LPCWSTR)L"Czas LaGrange:");
     SendMessage(hLblLA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hResLA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 400, 130, 60, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hResLA, (LPCWSTR)L"0.0000");
     SendMessage(hResLA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hResAA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 400, 160, 60, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hResAA, (LPCWSTR)L"0.0000");
     SendMessage(hResAA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hLblAA = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 300, 160, 100, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hLblAA, (LPCWSTR)L"Czas Aitkena:");
     SendMessage(hLblAA, WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     hResultVal = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 400, 230, 60, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hResultVal, (LPCWSTR)L"0.0000");
     SendMessage(hResultVal, WM_SETFONT, (WPARAM)hNormalFont, 0);
+   
     hResultLbl = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 300, 230, 100, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(hResultLbl, (LPCWSTR)L"Wynik:");
     SendMessage(hResultLbl , WM_SETFONT, (WPARAM)hNormalFont, 0);
+    
     h_xParamCap = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
         SS_LEFT, 50, 130, 150, 20, hwnd, NULL, hInstance, NULL);
     SetWindowText(h_xParamCap, (LPCWSTR)L"WprowadŸ parametr x:");
     SendMessage(h_xParamCap, WM_SETFONT, (WPARAM)hNormalFont, 0);
 
+    TCHAR coreInfo[32];
+    StringCchPrintf(coreInfo, sizeof(coreInfo) / sizeof(TCHAR), TEXT("Dostêpna iloœæ w¹tków: %d"), avThreads);
+    h_coreInfo = hResultLbl = CreateWindowEx(0, (LPCWSTR)L"STATIC", NULL, WS_CHILD | WS_VISIBLE |
+        SS_LEFT, 50, 250, 150, 20, hwnd, NULL, hInstance, NULL);
+    SetWindowText(h_coreInfo, (LPCWSTR)coreInfo);
+    SendMessage(h_coreInfo, WM_SETFONT, (WPARAM)hNormalFont, 0);
     
     if (hwnd == NULL)
     {
