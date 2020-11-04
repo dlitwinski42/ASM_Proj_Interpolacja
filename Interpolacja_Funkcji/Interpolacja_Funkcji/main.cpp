@@ -19,6 +19,8 @@ double* xCoords, * yCoords, xParam, resultLaG, resultAit;
 int  xCount, yCount;
 typedef double(*MYPROC2)(double*, double*, int, double, int);
 typedef double(*MYPROC)(double*,double*, int,double);
+typedef int(_fastcall* MyProc1)(double, double, double, double, int, int);
+MyProc1 LicznikLaG;
 MYPROC2 LaGC, AitC;
 int avThreads;
 
@@ -61,13 +63,21 @@ double* convert_buffer(LPWSTR buffer, int length, int& count) {
     std::vector<double> d_vec;
     double* result;
     double helper;
+    int sign = 1;
     for (int i = 0 ; i < length; i++) {
         if (buffer[i] == ',') {
-            d_vec.push_back(cvec_to_double(c_vec));
+            d_vec.push_back((cvec_to_double(c_vec) * (sign)));
             c_vec.clear();
+            sign = 1;
         }
         else if (buffer[i] == '.') {
             c_vec.push_back(buffer[i]);
+        }
+        else if (buffer[i] == '-') {
+            if ((i != 0) && buffer[i - 1] != ',') {
+                return NULL;
+            }
+            sign = -1;
         }
         else if ((int)buffer[i] < 58 && (int)buffer[i] > 47) {
                 c_vec.push_back(buffer[i]);
@@ -77,7 +87,7 @@ double* convert_buffer(LPWSTR buffer, int length, int& count) {
             return NULL;
         }
     }
-    d_vec.push_back(cvec_to_double(c_vec));
+    d_vec.push_back((cvec_to_double(c_vec) * (sign)));
     result = new double[d_vec.size()];
     count = d_vec.size();
     for (int i = 0; i < d_vec.size(); i++) {
@@ -94,6 +104,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     hDll = LoadLibrary((LPCWSTR)L"InterpolacjaCpp");
     LaGC = (MYPROC2)GetProcAddress(hDll, "LaGrangeFinal");
     AitC = (MYPROC2)GetProcAddress(hDll, "Aitken");
+    HINSTANCE dllHandle = NULL;
+    dllHandle = LoadLibrary(L"InterpolacjaAsm.dll");
+    LicznikLaG = (MyProc1)GetProcAddress(dllHandle, "LicznikLaGrange");
 
 
     WNDCLASSEX wc = {
@@ -264,9 +277,40 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
     case WM_COMMAND:
         switch (wParam) {
-        case ID_BTN_ASM:
+        case ID_BTN_ASM:{
+
+            if (SendMessage(g_hRadio_Input, BM_GETCHECK, 0, 0) == BST_CHECKED) {
+                dlugosc = GetWindowTextLength(h_Cores);
+                Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
+                GetWindowText(h_Cores, Bufor, dlugosc + 1);
+                if ((int)Bufor[0] < 58 && (int)Bufor[0] > 48) {
+                    avThreads = (int)Bufor[0] - 48;
+                }
+                else {
+                    MessageBox(hwnd, (LPCWSTR)L"B³êdna iloœæ w¹tków", (LPCWSTR)L"Ok", MB_ICONSTOP);
+                }
+            }
+            dlugosc = GetWindowTextLength(h_xParam);
+            Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
+            GetWindowText(h_xParam, Bufor, dlugosc + 1);
+            xParam = convert_buffer(Bufor, dlugosc, xCount)[0];
+            dlugosc = GetWindowTextLength(h_xCoord);
+            Bufor = (LPWSTR)GlobalAlloc(GPTR, dlugosc + 1);
+            GetWindowText(h_xCoord, Bufor, dlugosc + 1);
+            xCoords = convert_buffer(Bufor, dlugosc, xCount);
+            dlugosc = GetWindowTextLength(h_yCoord);
+            GetWindowText(h_yCoord, Bufor, dlugosc + 1);
+            yCoords = convert_buffer(Bufor, dlugosc, yCount);
+            if (xCount != yCount) {
+                MessageBox(hwnd, (LPCWSTR)L"B³êdna iloœæ wspó³rzêdnych", (LPCWSTR)L"Ok", MB_ICONSTOP);
+                break;
+            }
+            
+            double test = 5.6;
+            LicznikLaG(1.0, 2.0, 3.0, 4.0, 0, xCount);
+
             MessageBox(hwnd, (LPCWSTR)L"Realizacja w ASM", (LPCWSTR)L"Ok", MB_ICONINFORMATION);
-            break;
+        }   break;
         case ID_BTN_C: {
             if (SendMessage(g_hRadio_Input, BM_GETCHECK, 0, 0) == BST_CHECKED) {
                 dlugosc = GetWindowTextLength(h_Cores);
@@ -294,6 +338,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 MessageBox(hwnd, (LPCWSTR)L"B³êdna iloœæ wspó³rzêdnych", (LPCWSTR)L"Ok", MB_ICONSTOP);
                 break;
             }
+            
+            
             auto start_lc = std::chrono::steady_clock::now();
             resultLaG = LaGC(xCoords, yCoords, xCount, xParam, avThreads);
             auto end_lc = std::chrono::steady_clock::now();
