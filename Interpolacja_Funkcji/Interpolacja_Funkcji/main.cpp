@@ -19,9 +19,13 @@ double* xCoords, * yCoords, xParam, resultLaG, resultAit;
 int  xCount, yCount;
 typedef double(*MYPROC2)(double*, double*, int, double, int);
 typedef double(*MYPROC)(double*,double*, int,double);
-typedef int(_fastcall* MyProc1)(double, double, double, double, int, int);
+typedef int(_fastcall* MyProc1)(double, double, double*, double*, int, int);
+typedef int(_fastcall* MianLaG)(double*, double*, int, int);
+typedef int(_fastcall* Aitk)(double*, double, double ,double, double, double);
 MyProc1 LicznikLaG;
 MYPROC2 LaGC, AitC;
+MianLaG MianownikLaG;
+Aitk Aitken;
 int avThreads;
 
 double cvec_to_double(std::vector<char> c_vec) {
@@ -107,6 +111,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     HINSTANCE dllHandle = NULL;
     dllHandle = LoadLibrary(L"InterpolacjaAsm.dll");
     LicznikLaG = (MyProc1)GetProcAddress(dllHandle, "LicznikLaGrange");
+    MianownikLaG = (MianLaG)GetProcAddress(dllHandle, "MianownikLaGrange");
+    Aitken = (Aitk)GetProcAddress(dllHandle, "Aitken");
 
 
     WNDCLASSEX wc = {
@@ -306,8 +312,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
             }
             
-            double test = 5.6;
-            LicznikLaG(1.0, 2.0, 3.0, 4.0, 0, xCount);
+            double test = 0;
+            LicznikLaG(yCoords[0], xParam, xCoords, &(test), 0, xCount);
+            MianownikLaG(xCoords, &(test), 0, xCount);
+            //Aitken(wynik, Wij, Wik, xk, xj, xParam)
+            //Aitken(wynik, yi, yj, xj, xi, xParam)
+            Aitken(&(test),yCoords[0],yCoords[1],xCoords[1],xCoords[0],xParam);
 
             MessageBox(hwnd, (LPCWSTR)L"Realizacja w ASM", (LPCWSTR)L"Ok", MB_ICONINFORMATION);
         }   break;

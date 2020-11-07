@@ -1,1 +1,4 @@
-﻿
+﻿  Assembling Interpolacja.asm...
+     Trwa tworzenie biblioteki E:\Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\x64\Debug\InterpolacjaAsm.lib i obiektu E:\Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\x64\Debug\InterpolacjaAsm.exp
+InterpolacjaAsm.exp : warning LNK4070: /OUT: dyrektywa JAAsm.dll w pliku .EXP jest inna niż nazwa pliku wyjściowego "E:\Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\x64\Debug\InterpolacjaAsm.dll"; dyrektywa została zignorowana
+  InterpolacjaAsm.vcxproj -> E:\Studia\JA\Projekt\ASM_Proj_Interpolacja\Interpolacja_Funkcji\x64\Debug\InterpolacjaAsm.dll
