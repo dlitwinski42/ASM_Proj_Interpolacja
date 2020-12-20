@@ -19,11 +19,13 @@ double* xCoords, * yCoords, xParam, resultLaG, resultAit;
 int  xCount, yCount;
 typedef double(*MYPROC2)(double*, double*, int, double, int);
 typedef double(*MYPROC)(double*,double*, int,double);
+typedef void(*MYPROC3)(double*, double*);
 typedef int(_fastcall* MyProc1)(double, double, double*, double*, int, int);
 typedef int(_fastcall* MianLaG)(double*, double*, int, int);
 typedef int(_fastcall* Aitk)(double*, double, double ,double, double, double);
 MyProc1 LicznikLaG;
 MYPROC2 LaGC, AitC;
+MYPROC3 FinalLaG;
 MianLaG MianownikLaG;
 Aitk Aitken;
 int avThreads;
@@ -102,6 +104,92 @@ double* convert_buffer(LPWSTR buffer, int length, int& count) {
 }
 
 
+void divideAndAdd(double* tab1, double* tab2, double* result) {
+
+    FinalLaG(tab1, tab2);
+    *result += *tab1;
+}
+
+double LaGrangeAsm(int threads, int xCount, double* xCoords, double* yCoords, double xParam) {
+    double* liczniki = new double[xCount];
+    double* mianowniki = new double[xCount];
+    double result = 0;
+    std::thread* liczThreads = new std::thread[threads];
+    std::thread* mianThreads = new std::thread[threads];
+    if (threads > xCount) {
+        threads = xCount;
+    }
+    int done = 0;
+    while (done < xCount) {
+        if ((done + threads) > xCount) {
+            threads = xCount - done;
+        }
+        for (int i = 0; i < threads; i++) {
+            liczThreads[i] = std::thread(LicznikLaG, yCoords[(i+done)], xParam, xCoords, (liczniki + i + done), (i+done), xCount);
+            mianThreads[i] = std::thread(MianownikLaG, xCoords, (mianowniki + i + done), (i+done), xCount);
+        }
+        for (int i = 0; i < threads; i++) {
+            liczThreads[i].join();
+            mianThreads[i].join();
+        }        
+
+        done += threads;
+    }
+    for (int i = 0; i < xCount; i++) {
+            divideAndAdd(liczniki + i, mianowniki + i, &(result));
+    }
+    delete[] liczniki;
+    delete[] mianowniki;
+    delete[] liczThreads;
+    delete[] mianThreads;
+    return result;
+}
+
+double AitkenAsm(double* xCoord, double* yCoord, int count, double xParam, int threads) {
+    double result = 0;
+    if (threads > count) {
+        threads = count;
+    }
+    std::thread* myThreads = new std::thread[threads];
+    //Przygotowanie tablicy dwuwymiarowej
+    int tLength = count - 1;
+    double** tab = new double* [tLength];
+    for (int i = 0; i < tLength; i++) {
+        tab[i] = new double[tLength];
+    }
+    //Wype³nienie tablicy zerami
+    for (int i = 0; i < tLength; i++) {
+        for (int j = 0; j < tLength; j++) {
+            tab[i][j] = 0;
+        }
+    }
+    for (int i = 0; i < tLength; i++) {
+        Aitken(&(tab[0][i]), yCoords[0], yCoords[i+1], xCoords[i+1], xCoords[0], xParam);
+    }
+    for (int x = 1; x < tLength; x++) {
+        int y = x;
+        while (y < tLength) {
+            if ((y + threads) > tLength) {
+                threads = tLength - y;
+            }
+            for (int i = 0; i < threads; i++) {
+                myThreads[i] = std::thread(Aitken, &(tab[x][y+i]), tab[x-1][x-1], tab[x - 1][y + i], xCoord[y + 1 + i], xCoord[x], xParam);
+            }
+            for (int i = 0; i < threads; i++) {
+                myThreads[i].join();
+            }
+            y += threads;
+        }
+    }
+    result = tab[tLength - 1][tLength - 1];
+    for (int i = 0; i < tLength; i++) {
+        delete[] tab[i];
+    }
+    delete[] tab;
+    delete[] myThreads;
+    return result;
+}
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     HINSTANCE hDll;
@@ -112,6 +200,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     dllHandle = LoadLibrary(L"InterpolacjaAsm.dll");
     LicznikLaG = (MyProc1)GetProcAddress(dllHandle, "LicznikLaGrange");
     MianownikLaG = (MianLaG)GetProcAddress(dllHandle, "MianownikLaGrange");
+    FinalLaG = (MYPROC3)GetProcAddress(dllHandle, "FinalLaGrange");
     Aitken = (Aitk)GetProcAddress(dllHandle, "Aitken");
 
 
@@ -312,14 +401,37 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                 break;
             }
             
-            double test = 0;
-            LicznikLaG(yCoords[0], xParam, xCoords, &(test), 0, xCount);
-            MianownikLaG(xCoords, &(test), 0, xCount);
-            //Aitken(wynik, Wij, Wik, xk, xj, xParam)
-            //Aitken(wynik, yi, yj, xj, xi, xParam)
-            Aitken(&(test),yCoords[0],yCoords[1],xCoords[1],xCoords[0],xParam);
+            auto start_lc = std::chrono::steady_clock::now();
+            resultLaG = LaGrangeAsm(avThreads, xCount, xCoords, yCoords, xParam);
+            auto end_lc = std::chrono::steady_clock::now();
+            timeElapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end_lc - start_lc).count();
+            StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%0.10f"), timeElapsed);
+            SetWindowText(hResLA, (LPCWSTR)buff);
+
+           // LicznikLaG(yCoords[1], xParam, xCoords, &(test), 1, xCount);
+           // MianownikLaG(xCoords, &(test), 1, xCount);
+                //Aitken(wynik, Wij, Wik, xk, xj, xParam)
+                //Aitken(wynik, yi, yj, xj, xi, xParam)
+           // Aitken(&(test),yCoords[0],yCoords[1],xCoords[1],xCoords[0],xParam);
+           // Aitken(&(test), yCoords[0], yCoords[2], xCoords[2], xCoords[0], xParam);
+            auto start_ac = std::chrono::steady_clock::now();
+            resultAit = AitkenAsm(xCoords, yCoords, xCount, xParam, avThreads);
+            auto end_ac = std::chrono::steady_clock::now();
+            timeElapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end_ac - start_ac).count();
+            StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%0.10f"), timeElapsed);
+            SetWindowText(hResAA, (LPCWSTR)buff);
+           // Aitken(&(test), yCoords[0], yCoords[2], xCoords[2], xCoords[0], xParam);
 
             MessageBox(hwnd, (LPCWSTR)L"Realizacja w ASM", (LPCWSTR)L"Ok", MB_ICONINFORMATION);
+
+            if (abs((resultAit - resultLaG)) < 0.0001) {
+
+                StringCchPrintf(buff, sizeof(buff) / sizeof(TCHAR), TEXT("%f"), resultAit);
+                SetWindowText(hResultVal, (LPCWSTR)buff);
+            }
+            else {
+                MessageBox(hwnd, (LPCWSTR)L"Coœ posz³o nie tak!", (LPCWSTR)L"B³¹d!", MB_ICONINFORMATION);
+            }
         }   break;
         case ID_BTN_C: {
             if (SendMessage(g_hRadio_Input, BM_GETCHECK, 0, 0) == BST_CHECKED) {

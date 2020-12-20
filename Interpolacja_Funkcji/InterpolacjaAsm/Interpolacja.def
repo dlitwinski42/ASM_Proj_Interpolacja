@@ -2,3 +2,4 @@ LIBRARY JAAsm
 EXPORTS LicznikLaGrange
 EXPORTS MianownikLaGrange
 EXPORTS Aitken
+EXPORTS FinalLaGrange
