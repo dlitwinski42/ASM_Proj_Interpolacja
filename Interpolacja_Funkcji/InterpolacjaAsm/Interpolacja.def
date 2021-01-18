@@ -3,3 +3,4 @@ EXPORTS LicznikLaGrange
 EXPORTS MianownikLaGrange
 EXPORTS Aitken
 EXPORTS FinalLaGrange
+EXPORTS DivideVector

@@ -1,3 +1,4 @@
+#include "pch.h"
 #include "Interpolacja.h"
 #include <windows.h>
 
@@ -147,6 +148,7 @@ double Aitken(double* xCoord, double* yCoord, int count, double xParam, int thre
         delete[] tab[i];
     }
     delete[] tab;
+    delete[] myThreads;
     return result;
 }
 

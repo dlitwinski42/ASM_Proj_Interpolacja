@@ -58,6 +58,14 @@ movups [rcx], xmm0
 ret
 FinalLaGrange endp
 
+DivideVector proc
+movups xmm0, [rcx]
+movups xmm1, [rdx]
+divpd xmm0,xmm1
+movups [rcx], xmm0
+ret
+DivideVector endp
+
 Aitken proc
 movsd xmm4, qword ptr [rsp+40] ;Wyci¹gnij ze stosu xi
 movsd xmm5, qword ptr [rsp+48] ;Wyci¹gnij ze stosu xParam
